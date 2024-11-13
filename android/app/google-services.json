@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "54110701858",
+    "project_id": "surfcaster-b0130",
+    "storage_bucket": "surfcaster-b0130.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:54110701858:android:38ca37a3deaa53c0cabd7b",
+        "android_client_info": {
+          "package_name": "com.example.surf_caster"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCHS98iCxDP2mu9e_NXn-G2NsLh_3EE_5c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
