@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:surf_caster/PAGES/Googlemap.dart';
 import 'package:surf_caster/PAGES/Home_page.dart';
+import 'package:surf_caster/PAGES/WaveCondtionScreen.dart';
 import 'package:surf_caster/PAGES/favoritespage.dart';
 import 'package:surf_caster/PAGES/profile.dart';
+import 'package:surf_caster/PAGES/searchpage.dart';
+import 'package:surf_caster/main.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -18,7 +21,9 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _pages = [
     HomePage(),
+    Searchpage(),
     FavoritesPage(),
+    WaveConditionScreen(),
     ProfilePage(),
   ];
 
@@ -61,13 +66,20 @@ class _MainScreenState extends State<MainScreen> {
 
   // Handles the logout process
   void _logout() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-    await FirebaseAuth.instance.signOut();
-    Navigator.pop(context); // Close progress indicator dialog
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+      await FirebaseAuth.instance.signOut();
+      Navigator.pop(context); // Close the progress indicator
+    } catch (error) {
+      Navigator.pop(context); // Close the progress indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error logging out: $error')),
+      );
+    }
   }
 
   // Builds a dialog button with a custom action
@@ -79,12 +91,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   // Builds the AppBar with title and icons
-  SliverAppBar _buildAppBar() {
+  SliverAppBar _buildSliverAppBar() {
     return SliverAppBar(
       backgroundColor: Colors.white,
-      elevation: 0,
-      floating: true,
-      snap: true,
+      pinned: true, // Subtle shadow color
       title: const Text(
         "SurfCaster",
         style: TextStyle(
@@ -97,7 +107,8 @@ class _MainScreenState extends State<MainScreen> {
         _appBarIcon(Icons.logout, _showLogoutDialog), // Logout button
       ],
       systemOverlayStyle: const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent, 
         statusBarIconBrightness: Brightness.dark,
       ),
     );
@@ -117,7 +128,9 @@ class _MainScreenState extends State<MainScreen> {
       type: BottomNavigationBarType.fixed, // Set this to fixed to remove glow effect
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
         BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favorites'),
+        BottomNavigationBarItem(icon: Icon(Icons.waves), label: 'Wave Conditions'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
       currentIndex: _selectedIndex,
@@ -132,8 +145,13 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          _buildAppBar(),
-          SliverFillRemaining(child: _pages[_selectedIndex]),
+          _buildSliverAppBar(), // SliverAppBar
+          SliverFillRemaining(
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: _pages,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),

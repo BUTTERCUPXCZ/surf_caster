@@ -53,60 +53,53 @@ class _CreatePostState extends State<CreatePost> {
       username = fetchedUsername ?? "Guest"; // Set to "Guest" if no username found
     });
   }
-  Future<void> _uploadData() async {
-    setState(() {
-      nameError = nameController.text.isEmpty ? 'Please enter a name' : null;
-      locationError = locationController.text.isEmpty ? 'Please enter a location' : null;
-      levelError = levelController.text.isEmpty ? 'Please enter a difficulty level' : null;
-    });
+ Future<void> _uploadData() async {
+  setState(() {
+    nameError = nameController.text.isEmpty ? 'Please enter a name' : null;
+    locationError = locationController.text.isEmpty ? 'Please enter a location' : null;
+    levelError = levelController.text.isEmpty ? 'Please enter a difficulty level' : null;
+  });
 
-    if (nameError == null && locationError == null && levelError == null) {
-      String id = widget.postId ?? randomAlphaNumeric(10);
-      String userId = FirebaseAuth.instance.currentUser!.uid; // Get current user ID
+  if (nameError == null && locationError == null && levelError == null) {
+    String id = widget.postId ?? randomAlphaNumeric(10);
+    String userId = FirebaseAuth.instance.currentUser!.uid;
 
-      Map<String, dynamic> postDetailsMap = {
-        "Name": nameController.text,
-        "Location": locationController.text,
-        "Id": id,
-        "Difficulty Level": levelController.text,
-        "Username": username,
-        "userId":userId,
-        "favorites": [],
-      };
+    Map<String, dynamic> postDetailsMap = {
+      "Name": nameController.text,
+      "Location": locationController.text,
+      "Id": id,
+      "Difficulty Level": levelController.text,
+      "Username": username,
+      "userId": userId,
+      "favorites": [],
+    };
 
-      try {
-        final databaseMethods = DatabaseMethods();
-        if (widget.postId == null) {
-          await databaseMethods.createPostDetails(postDetailsMap, id);
-          Fluttertoast.showToast(
-            msg: "Post created successfully",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            backgroundColor: Colors.black,
-            textColor: Colors.white,
-          );
-        } else {
-          await databaseMethods.updatePostDetails(postDetailsMap, id);
-          Fluttertoast.showToast(
-            msg: "Post updated successfully",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.CENTER,
-            backgroundColor: Colors.black,
-            textColor: Colors.white,
-          );
-        }
-        Navigator.pop(context);
-      } catch (e) {
-        Fluttertoast.showToast(
-          msg: "Failed to save post: $e",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
+    try {
+      final databaseMethods = DatabaseMethods();
+      if (widget.postId == null) {
+        print("Creating post: $postDetailsMap");
+        await databaseMethods.createPostDetails(postDetailsMap, id);
+        Fluttertoast.showToast(msg: "Post created successfully");
+      } else {
+        print("Updating post: $postDetailsMap");
+        await databaseMethods.updatePostDetails(postDetailsMap, id);
+        Fluttertoast.showToast(msg: "Post updated successfully");
       }
+
+      print("Navigating back...");
+      if (mounted) {
+        Navigator.pop(context); // Redirect to the previous screen
+      }
+    } catch (e) {
+      print("Error saving post: $e");
+      Fluttertoast.showToast(
+        msg: "Failed to save post: $e",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
     }
   }
+}
 
   @override
   void dispose() {

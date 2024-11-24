@@ -12,17 +12,21 @@ class Register extends StatefulWidget {
 }
 
 class _SignUpState extends State<Register> {
+  // Controllers
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
-  String? errorMessage;
 
+  // Error Messages
+  String? emailError;
+  String? usernameError;
+  String? passwordError;
+  String? confirmPasswordError;
 
-
+  // Firestore Helper
   Future<void> addUserToFirestore(User user, String username) async {
     final userId = user.uid;
-    final joined = DateTime.now();
 
     try {
       await FirebaseFirestore.instance.collection('Users').doc(userId).set({
@@ -30,41 +34,86 @@ class _SignUpState extends State<Register> {
         'username': username,
         'Joined': FieldValue.serverTimestamp(),
         'email': user.email,
-        'bio': "Your bio here", // Replace with actual bio input if you have it
+        'bio': "Your bio here", // Replace with actual bio input if needed
       });
     } catch (e) {
-     showErrorDialog(context, e.toString());
+      showErrorDialog("Error adding user to Firestore: $e");
     }
   }
 
-  void showErrorDialog(BuildContext context, String errorMessage){
-       showDialog(
-        context: context,
-        builder: (BuildContext context){
-          return AlertDialog(
-           title: Text("Error"),
-           content: Text("Error adding user to Firestore: $errorMessage"),
-           actions: [
-            TextButton(
-              child:Text("OK"),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                }, 
-            ),
-           ],
-          );
-        }
-       );
+  // Show Error Dialog
+  void showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text("Error"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text("OK"),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
   }
 
+  // Field Validation Logic
+  bool validateFields() {
+    setState(() {
+      emailError = null;
+      usernameError = null;
+      passwordError = null;
+      confirmPasswordError = null;
+    });
+
+    final email = emailController.text.trim();
+    final username = usernameController.text.trim();
+    final password = passwordController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
+
+    // Email Validation
+    if (email.isEmpty) {
+      emailError = "Email is required";
+    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      emailError = "Please enter a valid email address";
+    }
+
+    // Username Validation
+    if (username.isEmpty) {
+      usernameError = "Username is required";
+    } else if (username.length < 3) {
+      usernameError = "Username must be at least 3 characters";
+    }
+
+    // Password Validation
+    if (password.isEmpty) {
+      passwordError = "Password is required";
+    } else if (password.length < 6) {
+      passwordError = "Password must be at least 6 characters long";
+    }
+
+    // Confirm Password Validation
+    if (confirmPassword.isEmpty) {
+      confirmPasswordError = "Please confirm your password";
+    } else if (password != confirmPassword) {
+      confirmPasswordError = "Passwords do not match";
+    }
+
+    //Check if all fields Null
+    return emailError == null &&
+        usernameError == null &&
+        passwordError == null &&
+        confirmPasswordError == null;
+  }
+
+  // Sign Up Function
   void signUp() async {
-    if (passwordController.text.trim() != confirmPasswordController.text.trim()) {
-      setState(() {
-        errorMessage = "Passwords do not match";
-      });
-      return;
+    if (!validateFields()) {
+      return; // Stop execution if validation fails
     }
 
+    // Show loading indicator
     showDialog(
       barrierDismissible: false,
       context: context,
@@ -72,21 +121,56 @@ class _SignUpState extends State<Register> {
     );
 
     try {
+      // Firebase Authentication
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
+      // Add User to Firestore
       User user = userCredential.user!;
       await addUserToFirestore(user, usernameController.text.trim());
 
       if (mounted) Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       Navigator.pop(context);
-      setState(() {
-        errorMessage = e.message;
-      });
+      showErrorDialog(e.message ?? "An error occurred during sign-up");
     }
+  }
+
+  // Reusable TextField Builder
+  Widget buildTextField({
+    required String labelText,
+    required String hintText,
+    required TextEditingController controller,
+    String? errorText,
+    bool obscureText = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          obscureText: obscureText,
+          decoration: InputDecoration(
+            labelText: labelText,
+            hintText: hintText,
+            errorText: errorText,
+            filled: true,
+            fillColor: Colors.grey[200],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 15,
+              horizontal: 15,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
   }
 
   @override
@@ -100,13 +184,16 @@ class _SignUpState extends State<Register> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.surfing,
-                  size: 100,
-                  color: Theme.of(context).colorScheme.primary,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: Image.asset(
+                    "assets/new(2).png",
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
                 ),
                 const SizedBox(height: 20),
-
                 Text(
                   "Create Account",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -116,101 +203,36 @@ class _SignUpState extends State<Register> {
                       ),
                 ),
                 const SizedBox(height: 30),
-
-                // Username TextField
-                TextField(
+                // Username
+                buildTextField(
+                  labelText: "Username",
+                  hintText: "",
                   controller: usernameController,
-                  decoration: InputDecoration(
-                    labelText: "Username",
-                    hintText: "Enter your username",
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 15,
-                      horizontal: 15,
-                    ),
-                  ),
+                  errorText: usernameError,
                 ),
-                const SizedBox(height: 12),
-
-                // Email TextField
-                TextField(
+                // Email
+                buildTextField(
+                  labelText: "Email",
+                  hintText: "",
                   controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: "Email",
-                    hintText: "Enter your email",
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 15,
-                      horizontal: 15,
-                    ),
-                  ),
+                  errorText: emailError,
                 ),
-                const SizedBox(height: 12),
-
-                // Password TextField
-                TextField(
+                // Password
+                buildTextField(
+                  labelText: "Password",
+                  hintText: "",
                   controller: passwordController,
+                  errorText: passwordError,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: "Password",
-                    hintText: "Create a password",
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 15,
-                      horizontal: 15,
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 12),
-
-                // Confirm Password TextField
-                TextField(
+                // Confirm Password
+                buildTextField(
+                  labelText: "Confirm Password",
+                  hintText: "",
                   controller: confirmPasswordController,
+                  errorText: confirmPasswordError,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: "Confirm Password",
-                    hintText: "Confirm your password",
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 15,
-                      horizontal: 15,
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 20),
-
-                // Error Message
-                if (errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      errorMessage!,
-                      style: TextStyle(color: Colors.redAccent),
-                    ),
-                  ),
-                const SizedBox(height: 20),
-
-                // Sign Up Button
                 ElevatedButton(
                   onPressed: signUp,
                   style: ElevatedButton.styleFrom(
@@ -232,11 +254,10 @@ class _SignUpState extends State<Register> {
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Already have an account? "),
+                    const Text("Already have an account? "),
                     GestureDetector(
                       onTap: widget.onTap,
                       child: Text(
