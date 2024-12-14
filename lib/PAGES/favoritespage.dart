@@ -24,7 +24,16 @@ class _FavoritesPageState extends State<FavoritesPage> {
     super.initState();
     loadFavoritePosts();
   }
-
+ 
+  void addFavoritesFieldToUsers() async {
+  FirebaseFirestore.instance.collection('Users').get().then((querySnapshot) {
+    for (var doc in querySnapshot.docs) {
+      if (!doc.data().containsKey('favorites')) {
+        doc.reference.set({'favorites': []}, SetOptions(merge: true));
+      }
+    }
+  });
+}
   Future<void> loadFavoritePosts() async {
     if (!mounted) return; // Check if the widget is still mounted
     setState(() {
@@ -212,52 +221,64 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('Users')
-            .doc(currentUserId)
-            .snapshots(),
-        builder: (context, userSnapshot) {
-          if (userSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('Users')
+          .doc(currentUserId)
+          .snapshots(),
+      builder: (context, userSnapshot) {
+        if (userSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-            return const Center(child: Text("No user data found"));
-          }
+        if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+          return const Center(child: Text("No user data found"));
+        }
 
-          List<String> favoritePostIds = List<String>.from(userSnapshot.data!['favorites'] ?? []);
+        // Handle missing 'favorites' field
+        Map<String, dynamic>? userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+        List<String> favoritePostIds = [];
+        if (userData != null && userData.containsKey('favorites')) {
+          favoritePostIds = List<String>.from(userData['favorites'] ?? []);
+        }
 
-          // Listen to post changes
-          return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('Post')
-                .where(FieldPath.documentId, whereIn: favoritePostIds.isNotEmpty ? favoritePostIds : ['dummyId'])
-                .snapshots(),
-            builder: (context, postSnapshot) {
-              if (postSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+        // Handle empty favorites
+        if (favoritePostIds.isEmpty) {
+          return const Center(child: Text("No favorite posts found"));
+        }
 
-              if (!postSnapshot.hasData || postSnapshot.data!.docs.isEmpty) {
-                return const Center(child: Text("No favorite posts found"));
-              }
+        // Stream posts based on favorites
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('Post')
+              .where(FieldPath.documentId, whereIn: favoritePostIds)
+              .snapshots(),
+          builder: (context, postSnapshot) {
+            if (postSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              List<DocumentSnapshot> posts = postSnapshot.data!.docs;
+            if (!postSnapshot.hasData || postSnapshot.data!.docs.isEmpty) {
+              return const Center(child: Text("No favorite posts found"));
+            }
 
-              return ListView.builder(
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  DocumentSnapshot post = posts[index];
-                  return buildFavoritePostCard(post);
-                },
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
+            List<DocumentSnapshot> posts = postSnapshot.data!.docs;
+
+            return ListView.builder(
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                DocumentSnapshot post = posts[index];
+                return buildFavoritePostCard(post);
+              },
+            );
+          },
+        );
+      },
+    ),
+  );
+}
+
+
 }

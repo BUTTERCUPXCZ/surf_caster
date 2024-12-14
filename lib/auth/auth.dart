@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:surf_caster/COMPONENTS/MainScreen.dart';
+import 'package:surf_caster/COMPONENTS/mainScreen.dart';
 import 'package:surf_caster/PAGES/Home_page.dart';
 import 'package:surf_caster/auth/login_or_register.dart';
 

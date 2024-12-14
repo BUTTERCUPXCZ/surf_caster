@@ -9,8 +9,9 @@ import 'package:surf_caster/PAGES/profile.dart';
 import 'package:surf_caster/auth/auth.dart';
 import 'package:surf_caster/auth/login_or_register.dart';
 import 'package:surf_caster/helper/favoriteNotifier.dart';
+import 'package:surf_caster/theme/dark_mode.dart';
 import 'package:surf_caster/theme/light_mode.dart'; 
-import 'package:surf_caster/COMPONENTS/MainScreen.dart';
+import 'package:surf_caster/COMPONENTS/mainScreen.dart';
 import 'package:path_provider/path_provider.dart';
 
 void main() async {

@@ -1,12 +1,15 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geocoding/geocoding.dart'; // For geocoding the search query
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 
 class Googlemap extends StatefulWidget {
   final double latitude;
   final double longitude;
   final String locationName;
-  
+
   const Googlemap({
     Key? key,
     required this.latitude,
@@ -39,7 +42,7 @@ class _GooglemapState extends State<Googlemap> {
     );
   }
 
-   Future<void> _searchLocation() async {
+  Future<void> _searchLocation() async {
     String location = _searchController.text;
     if (location.isNotEmpty) {
       try {
@@ -49,7 +52,7 @@ class _GooglemapState extends State<Googlemap> {
           LatLng target = LatLng(loc.latitude, loc.longitude);
 
           // Move the camera and add a marker
-        _controller?.animateCamera(CameraUpdate.newCameraPosition(
+          _controller?.animateCamera(CameraUpdate.newCameraPosition(
             CameraPosition(target: target, zoom: 16),
           ));
 
@@ -70,12 +73,14 @@ class _GooglemapState extends State<Googlemap> {
       } catch (e) {
         print("Error searching location: $e");
       }
-      }
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
+    // Check if the keyboard is visible
+    bool isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -89,44 +94,39 @@ class _GooglemapState extends State<Googlemap> {
               _moveToTargetLocation();
             },
             markers: _markers,
-          ),
-          Positioned(
-            top: 40,
-            left: 15,
-            right: 15,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+            myLocationEnabled: true, // Enables location layer
+            myLocationButtonEnabled: true, // Enables location button
+            zoomControlsEnabled: true, // Enables zoom controls
+            scrollGesturesEnabled: true, // Enable scrolling
+            zoomGesturesEnabled: true, // Enable zoom gestures
+            rotateGesturesEnabled: true, // Enable rotation
+            tiltGesturesEnabled: true, // Enable tilt
+            gestureRecognizers: Set()
+              ..add(
+                Factory<OneSequenceGestureRecognizer>(
+                  () => EagerGestureRecognizer(), // Allows all gestures
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: "Search location",
-                        border: InputBorder.none,
-                      ),
-                      onSubmitted: (_) => _searchLocation(),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.search),
+          ),
+          // Show the search bar only if the keyboard is not visible
+          if (!isKeyboardVisible)
+            Positioned(
+              top: 40,
+              left: 15,
+              right: 15,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                child: SearchBar(
+                  controller: _searchController,
+                  hintText: "Search location",
+                  onSubmitted: (_) => _searchLocation(),
+                  leading: IconButton(
+                    icon: Icon(Icons.search, color: Colors.black),
                     onPressed: _searchLocation,
                   ),
-                ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

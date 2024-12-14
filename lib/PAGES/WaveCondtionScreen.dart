@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart'; // For geocoding
+import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -25,22 +25,16 @@ class _WaveConditionScreenState extends State<WaveConditionScreen> {
     });
 
     try {
-      // Geocode the location to get latitude and longitude
       List<Location> locations = await locationFromAddress(location);
       if (locations.isNotEmpty) {
-        setState(() {
-          latitude = locations.first.latitude;
-          longitude = locations.first.longitude;
-        });
+        latitude = locations.first.latitude;
+        longitude = locations.first.longitude;
 
-        // Fetch wave height data from StormGlass API
         final url =
             'https://api.stormglass.io/v2/weather/point?lat=$latitude&lng=$longitude&params=waveHeight,windSpeed';
         final response = await http.get(
           Uri.parse(url),
-          headers: {
-            'Authorization': apiKey, // Add API key to headers
-          },
+          headers: {'Authorization': apiKey},
         );
 
         if (response.statusCode == 200) {
@@ -53,7 +47,7 @@ class _WaveConditionScreenState extends State<WaveConditionScreen> {
       }
     } catch (e) {
       setState(() {
-        errorMessage = 'Failed to fetch location or weather data: $e';
+        errorMessage = 'Error: $e';
         weatherData = null;
       });
     } finally {
@@ -63,69 +57,56 @@ class _WaveConditionScreenState extends State<WaveConditionScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Search bar with styling
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        filled: true,
-                        fillColor: Colors.white,
-                        hintText: 'Enter location (e.g., San Francisco)',
-                        hintStyle: TextStyle(color: Colors.grey[600]),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      final location = _searchController.text.trim();
-                      if (location.isNotEmpty) {
-                        fetchWeatherData(location);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      shape: CircleBorder(),
-                      padding: EdgeInsets.all(10),
-                      backgroundColor: Colors.white,
-                    ),
-                    child: Icon(Icons.search, color: Colors.blue),
-                  ),
-                ],
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Column(
+      children: [
+        // AppBar and Search Bar combined
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10.0), // Only horizontal padding
+          child: Column(
+            children: [
+              const SizedBox(height: 20), // Adjust vertical spacing
+              SearchBar(
+                controller: _searchController,
+                hintText: 'Search location(e.g, Mati City)',
+                leading: Icon(Icons.search, color: const Color.fromARGB(255, 34, 34, 34)),
+               onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    fetchWeatherData(value.trim());
+                  }
+                  }
               ),
-            ),
-            SizedBox(height: 16),
-
-            // Main content
-            Expanded(
-              child: isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : weatherData == null
-                      ? errorMessage != null
-                          ? ErrorDisplay(errorMessage: errorMessage!, onRetry: () => fetchWeatherData(_searchController.text))
-                          : Center(child: Text('Enter a location to fetch data'))
-                      : WeatherDetails(weatherData: weatherData!, location: _searchController.text),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
+        // Main content
+        Expanded(
+          child: isLoading
+              ? Center(child: CircularProgressIndicator())
+              : weatherData != null
+                  ? WeatherDetails(
+                      weatherData: weatherData!,
+                      location: _searchController.text,
+                    )
+                  : errorMessage != null
+                      ? ErrorDisplay(
+                          errorMessage: errorMessage!,
+                          onRetry: () => fetchWeatherData(_searchController.text),
+                        )
+                      : Center(
+                          child: Text(
+                            'Enter a location to view wave conditions',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ),
+        ),
+      ],
+    ),
+  );
+}
+
 }
 
 class WeatherDetails extends StatelessWidget {
@@ -136,34 +117,57 @@ class WeatherDetails extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Extracting wave height and wind speed
-    final waveHeight = weatherData['hours'][0]['waveHeight']['sg'] ?? 'N/A'; // sg is StormGlass-specific
+    final waveHeight = weatherData['hours'][0]['waveHeight']['sg'] ?? 'N/A';
     final windSpeed = weatherData['hours'][0]['windSpeed']['sg'] ?? 'N/A';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.all(16.0),
+      child: ListView(
         children: [
           Text(
             location,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueGrey[800]),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 20),
           Card(
-            elevation: 3,
+            elevation: 4,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Wave Height', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                  Text('$waveHeight m', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 16),
-                  Text('Wind Speed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                  Text('$windSpeed m/s', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      Icon(Icons.waves, color: Colors.blue, size: 40),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Wave Height', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            Text('$waveHeight m', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Divider(height: 32, thickness: 1, color: Colors.grey[300]),
+                  Row(
+                    children: [
+                      Icon(Icons.air, color: Colors.green, size: 40),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Wind Speed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                            Text('$windSpeed m/s', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -187,10 +191,14 @@ class ErrorDisplay extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.error, color: Colors.red, size: 48),
-          SizedBox(height: 8),
-          Text(errorMessage, textAlign: TextAlign.center),
-          SizedBox(height: 16),
-          ElevatedButton(onPressed: onRetry, child: Text('Retry'))
+          const SizedBox(height: 8),
+          Text(errorMessage, textAlign: TextAlign.center, style: TextStyle(fontSize: 16, color: Colors.grey[800])),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: onRetry,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            child: Text('Retry'),
+          ),
         ],
       ),
     );

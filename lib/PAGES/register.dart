@@ -34,6 +34,7 @@ class _SignUpState extends State<Register> {
         'username': username,
         'Joined': FieldValue.serverTimestamp(),
         'email': user.email,
+        'favorites': [],
         'bio': "Your bio here", // Replace with actual bio input if needed
       });
     } catch (e) {

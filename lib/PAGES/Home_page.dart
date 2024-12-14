@@ -51,22 +51,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
- 
- // Search logic
-  void searchPost(String query) {
-    setState(() {
-      if(query.isEmpty){
-       filteredPosts = allPosts;
-      }else{
-        filteredPosts = allPosts
-        .where((post)=>
-        post['Location']!.toLowerCase().contains(query.toLowerCase())).toList();
-      }
-    });
-  }
-
-
-
   Future<void> loadPostStream() async {
     postStream = await DatabaseMethods().getPostDetails();
 
@@ -178,26 +162,41 @@ class _HomePageState extends State<HomePage> {
   String postID = ds.id;
 
   return Container(
-    margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+    margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
     child: Card(
-      elevation: 4.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+      elevation: 3.0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(25.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header Row: Username + Popup Menu
             Row(
               children: [
-                Text(
-                  "Posted by: ${ds["Username"]}",
-                  style: TextStyle(
-                    color: Colors.blueGrey.shade700,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                CircleAvatar(
+                  backgroundColor: Colors.blueGrey.shade200,
+                  child: Text(
+                    ds["Username"].substring(0, 1).toUpperCase(),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 10.0),
+                Expanded(
+                  child: Text(
+                    ds["Username"],
+                    style: TextStyle(
+                      color: Colors.blueGrey.shade900,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
                 if (ds["userId"] == currentUserId)
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert, color: Colors.black),
@@ -221,7 +220,9 @@ class _HomePageState extends State<HomePage> {
                   ),
               ],
             ),
-            const SizedBox(height: 10.0),
+            const SizedBox(height: 16.0),
+
+            // Title
             Text(
               ds["Name"],
               style: const TextStyle(
@@ -230,61 +231,85 @@ class _HomePageState extends State<HomePage> {
                 color: Colors.black87,
               ),
             ),
-            const SizedBox(height: 4.0),
+            const SizedBox(height: 8.0),
+
+            // Location
             GestureDetector(
               onTap: () => openGoogleMap(context, ds["Location"]),
-              child: Text(
-                "Location: ${ds["Location"]}",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline,
-                ),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, color: Colors.blue, size: 18),
+                  const SizedBox(width: 4.0),
+                  Expanded(
+                    child: Text(
+                      ds["Location"],
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4.0),
-            Text(
-              "Difficulty Level: ${ds["Difficulty Level"]}",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 10.0),
-            // Consumer for Favorite Button
-             Consumer<Favoritenotifier>(
-  builder: (context, favoritesNotifier, child) {
-    bool isFavorite = favoritesNotifier.favoritePostIds.contains(postID);
+            const SizedBox(height: 8.0),
 
-    return IconButton(
-      icon: Icon(
-        isFavorite ? Icons.favorite : Icons.favorite_border,
-        color: isFavorite ? Colors.red : Colors.grey,
-      ),
-      onPressed: () async {
-        if (isFavorite) {
-          // Remove from favorites
-          await FirebaseFirestore.instance
-              .collection('Users')
-              .doc(currentUserId)
-              .update({
-            'favorites': FieldValue.arrayRemove([postID]),
-          });
-          favoritesNotifier.removeFavorite(postID);
-        } else {
-          // Add to favorites
-          await FirebaseFirestore.instance
-              .collection('Users')
-              .doc(currentUserId)
-              .update({
-            'favorites': FieldValue.arrayUnion([postID]),
-          });
-          favoritesNotifier.addFavorite(postID);
-        }
-      },
-    );
-  },
-),
+            // Difficulty Level
+            Row(
+              children: [
+                Icon(Icons.leaderboard, color: Colors.grey, size: 18),
+                const SizedBox(width: 4.0),
+                Text(
+                  "Difficulty: ${ds["Difficulty Level"]}",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16.0),
+
+            // Footer: Favorite Button
+            Align(
+              alignment: Alignment.centerRight,
+              child: Consumer<Favoritenotifier>(
+                builder: (context, favoritesNotifier, child) {
+                  bool isFavorite =
+                      favoritesNotifier.favoritePostIds.contains(postID);
+
+                  return IconButton(
+                    icon: Icon(
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: isFavorite ? Colors.red : Colors.grey,
+                    ),
+                    onPressed: () async {
+                      if (isFavorite) {
+                        // Remove from favorites
+                        await FirebaseFirestore.instance
+                            .collection('Users')
+                            .doc(currentUserId)
+                            .update({
+                          'favorites': FieldValue.arrayRemove([postID]),
+                        });
+                        favoritesNotifier.removeFavorite(postID);
+                      } else {
+                        // Add to favorites
+                        await FirebaseFirestore.instance
+                            .collection('Users')
+                            .doc(currentUserId)
+                            .update({
+                          'favorites': FieldValue.arrayUnion([postID]),
+                        });
+                        favoritesNotifier.addFavorite(postID);
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -293,41 +318,10 @@ class _HomePageState extends State<HomePage> {
 }
 
 
+
  Widget buildPostList() {
   return Column(
     children: [
-      // Search Bar with Button
-      Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: "Search by location",
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                 FocusScope.of(context).unfocus();
-
-                setState(() {
-                  searchQuery = searchController.text.trim();
-                });
-              },
-              child: const Text("Search"),
-            ),
-          ],
-        ),
-      ),
-
       // Posts
       Expanded(
         child: StreamBuilder(
@@ -372,6 +366,7 @@ class _HomePageState extends State<HomePage> {
   @override
 Widget build(BuildContext context) {
   return Scaffold(
+  backgroundColor: Colors.white,
     floatingActionButton: FloatingActionButton(
       onPressed: () {
         Navigator.push(
@@ -379,15 +374,18 @@ Widget build(BuildContext context) {
           MaterialPageRoute(builder: (context) => const CreatePost()),
         );
       },
-      backgroundColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: Theme.of(context).colorScheme.onSecondary,
       child: const Icon(Icons.add, color: Colors.white),
     ),
     body: Column(
       children: [
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-            child: buildPostList(), // Updated with search bar
+            padding: EdgeInsets.zero, // Remove unintended vertical/horizontal padding
+            child: Container(
+              color: const Color.fromARGB(255, 245, 245, 245), // Ensure this matches the Scaffold's background color
+              child: buildPostList(), // The widget for your posts
+            ),
           ),
         ),
       ],

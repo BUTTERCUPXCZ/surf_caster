@@ -1,13 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:surf_caster/PAGES/Googlemap.dart';
 import 'package:surf_caster/PAGES/Home_page.dart';
 import 'package:surf_caster/PAGES/WaveCondtionScreen.dart';
 import 'package:surf_caster/PAGES/favoritespage.dart';
 import 'package:surf_caster/PAGES/profile.dart';
 import 'package:surf_caster/PAGES/searchpage.dart';
-import 'package:surf_caster/main.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -16,39 +16,50 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
+  bool _isKeyboardVisible = false;
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
     HomePage(),
-    Searchpage(),
+    Googlemap(
+      latitude: 12.8797,
+      longitude: 121.7740,
+      locationName: "Philippines",
+    ),
     FavoritesPage(),
     WaveConditionScreen(),
     ProfilePage(),
   ];
 
-  // Navigation logic
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this); // Add the observer
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Remove the observer
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    // Check if the keyboard is visible by comparing viewInsets.bottom
+    final bottomInset = WidgetsBinding.instance.window.viewInsets.bottom;
+    setState(() {
+      _isKeyboardVisible = bottomInset > 0.0;
+    });
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  // Opens the Google Map page
-  void _openGoogleMap() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Googlemap(
-          latitude: 12.8797,
-          longitude: 121.7740,
-          locationName: "Philippines",
-        ),
-      ),
-    );
-  }
-
-  // Logout dialog
   Future<void> _showLogoutDialog() async {
     final shouldLogout = await showDialog<bool>(
       context: context,
@@ -64,7 +75,6 @@ class _MainScreenState extends State<MainScreen> {
     if (shouldLogout == true) _logout();
   }
 
-  // Handles the logout process
   void _logout() async {
     try {
       showDialog(
@@ -82,7 +92,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // Builds a dialog button with a custom action
   TextButton _dialogButton(String text, VoidCallback onPressed) {
     return TextButton(
       onPressed: onPressed,
@@ -90,71 +99,128 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // Builds the AppBar with title and icons
-  SliverAppBar _buildSliverAppBar() {
-    return SliverAppBar(
-      backgroundColor: Colors.white,
-      pinned: true, // Subtle shadow color
-      title: const Text(
-        "SurfCaster",
-        style: TextStyle(
-          color: Colors.black,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      actions: [
-        _appBarIcon(Icons.map, _openGoogleMap), // Google Map button
-        _appBarIcon(Icons.logout, _showLogoutDialog), // Logout button
-      ],
-      systemOverlayStyle: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.transparent, 
-        statusBarIconBrightness: Brightness.dark,
-      ),
-    );
-  }
-
-  // Creates an AppBar icon with an action
-  IconButton _appBarIcon(IconData icon, VoidCallback onPressed) {
-    return IconButton(
-      icon: Icon(icon, color: Colors.grey[900]),
-      onPressed: onPressed,
-    );
-  }
-
-  // Builds the BottomNavigationBar
-  BottomNavigationBar _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed, // Set this to fixed to remove glow effect
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-        BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favorites'),
-        BottomNavigationBarItem(icon: Icon(Icons.waves), label: 'Wave Conditions'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-      ],
-      currentIndex: _selectedIndex,
-      selectedItemColor: const Color(0xFF4267B2),
-      unselectedItemColor: Colors.grey,
-      onTap: _onItemTapped,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(), // SliverAppBar
-          SliverFillRemaining(
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: _pages,
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus(); // Dismiss the keyboard
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: Column(
+          children: [
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  if (_selectedIndex != 1)
+                    SliverAppBar(
+                      backgroundColor: const Color.fromARGB(255, 30, 30, 30),
+                      elevation: 0,
+                      title: Text(
+                        _getAppBarTitle(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      iconTheme: const IconThemeData(color: Colors.white),
+                      actions: [
+                        if (_selectedIndex == 0)
+                          IconButton(
+                            icon: const Icon(Icons.search, color: Colors.white),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const Searchpage(),
+                                ),
+                              );
+                            },
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.logout, color: Colors.white),
+                          onPressed: _showLogoutDialog,
+                        ),
+                      ],
+                      systemOverlayStyle: const SystemUiOverlayStyle(
+                        statusBarColor: Colors.transparent,
+                        statusBarIconBrightness: Brightness.light,
+                      ),
+                    ),
+                  SliverFillRemaining(
+                    child: MediaQuery.removePadding(
+                      context: context,
+                      removeBottom: true,
+                      child: IndexedStack(
+                        index: _selectedIndex,
+                        children: _pages,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
+        // Conditionally display the BottomNavigationBar
+        bottomNavigationBar: _isKeyboardVisible ? null : _buildBottomNavigationBar(),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  String _getAppBarTitle() {
+    switch (_selectedIndex) {
+      case 0: // Home
+        return "SurfCaster";
+      case 2: // Favorites
+        return "Favorites";
+      case 3: // Wave Conditions
+        return "Wave Conditions";
+      case 4: // Profile
+        return "Profile";
+      default: // Other pages (e.g., Explore/GoogleMap)
+        return "";
+    }
+  }
+
+  BottomNavigationBar _buildBottomNavigationBar() {
+    return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      iconSize: 27,
+      items: [
+        BottomNavigationBarItem(
+          icon: Icon(Iconsax.home_1),
+          activeIcon: Icon(Iconsax.home),
+          label: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Iconsax.location),
+          activeIcon: Icon(Iconsax.location_add),
+          label: 'Explore',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Iconsax.heart),
+          activeIcon: Icon(Iconsax.heart5),
+          label: 'Favorites',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Iconsax.cloud_drizzle),
+          activeIcon: Icon(Iconsax.cloud_drizzle5),
+          label: 'Wave',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Iconsax.user),
+          activeIcon: Icon(Iconsax.user),
+          label: 'Profile',
+        ),
+      ],
+      currentIndex: _selectedIndex,
+      selectedItemColor: Colors.black,
+      unselectedItemColor: Colors.grey[500],
+      backgroundColor: Colors.white,
+      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+      unselectedLabelStyle: const TextStyle(fontSize: 11),
+      onTap: _onItemTapped,
     );
   }
 }

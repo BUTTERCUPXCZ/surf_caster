@@ -23,15 +23,35 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
 
-  Future<void> fetchJoinedDate() async{
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection("Users").doc(currentUser.uid).get();
-    Timestamp joinedTimeStamp = userDoc['Joined'];
-    
-    setState(() {
-      joinedDate = joinedTimeStamp.toDate();
-    });
+  Future<void> fetchJoinedDate() async {
+  try {
+    // Fetch the user document
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection("Users")
+        .doc(currentUser.uid)
+        .get();
 
+    // Safely cast data to Map<String, dynamic>
+    final userData = userDoc.data() as Map<String, dynamic>?;
+
+    if (userData != null && userData.containsKey('Joined')) {
+      // Check if 'Joined' field is not null
+      Timestamp joinedTimeStamp = userData['Joined'] as Timestamp;
+
+      setState(() {
+        joinedDate = joinedTimeStamp.toDate();
+      });
+    } else {
+      // Handle the case where 'Joined' is missing
+      print("The 'Joined' field is missing or null.");
+    }
+  } catch (e) {
+    // Handle errors
+    print("Error fetching joined date: $e");
   }
+}
+
+
   
 
   Future<void> editField(String field, String currentValue) async {
