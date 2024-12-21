@@ -16,7 +16,8 @@ class Searchpage extends StatefulWidget {
 class _SearchpageState extends State<Searchpage> {
   final TextEditingController searchController = TextEditingController();
   final FocusNode searchFocusNode = FocusNode();
-  final StreamController<List<DocumentSnapshot>> _streamController = StreamController<List<DocumentSnapshot>>();
+  final StreamController<List<DocumentSnapshot>> _streamController =
+      StreamController<List<DocumentSnapshot>>();
 
   @override
   void dispose() {
@@ -35,7 +36,8 @@ class _SearchpageState extends State<Searchpage> {
     try {
       String searchQuery = query.toLowerCase();
 
-      final snapshots = FirebaseFirestore.instance.collection('Post').snapshots();
+      final snapshots =
+          FirebaseFirestore.instance.collection('Post').snapshots();
 
       snapshots.listen((snapshot) {
         final filteredDocs = snapshot.docs.where((doc) {
@@ -158,6 +160,7 @@ class _SearchpageState extends State<Searchpage> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        // Dismiss the keyboard when tapping outside the TextField
         if (searchFocusNode.hasFocus) {
           searchFocusNode.unfocus();
         }
@@ -169,7 +172,7 @@ class _SearchpageState extends State<Searchpage> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.black),
             onPressed: () {
-              // Unfocus the keyboard before navigating back
+              // Dismiss the keyboard explicitly when back is pressed
               if (searchFocusNode.hasFocus) {
                 searchFocusNode.unfocus();
               }

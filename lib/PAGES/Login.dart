@@ -67,7 +67,7 @@ class _LoginState extends State<Login> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(50),
                     child: Image.asset(
-                      "assets/new(2).png",
+                      "assets/new-Logo.png",
                       width: 100,
                       height: 100,
                       fit: BoxFit.cover,
